@@ -1,1 +1,4 @@
-
+npm create vite@latest frontend -- --template react
+cd frontend
+# copy the src/ files in
+npm install && npm run dev
