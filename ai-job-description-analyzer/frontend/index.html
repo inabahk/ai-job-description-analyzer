@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Job Description Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f6f1;
+    --surface: #ffffff;
+    --border: #e2ddd6;
+    --ink: #1a1714;
+    --accent: #d4500a;
+    --accent2: #0a7dd4;
+    --muted: #8a8278;
+    --green: #1a7a4a;
+    --yellow-bg: #fef9ec;
+    --red-bg: #fdf2f2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'JetBrains Mono', monospace; min-height: 100vh; }
+
+  header { padding: 1.5rem 2rem; border-bottom: 2px solid var(--ink); display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Cabinet Grotesk', sans-serif; font-size: 1.4rem; font-weight: 800; }
+  .logo span { color: var(--accent); }
+  .tagline { font-size: 0.75rem; color: var(--muted); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 3rem 1.5rem; }
+  h1 { font-family: 'Cabinet Grotesk', sans-serif; font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; line-height: 1.05; margin-bottom: 0.5rem; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 0.82rem; margin-bottom: 2.5rem; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media(max-width:640px){ .two-col { grid-template-columns: 1fr; } }
+
+  label { display: block; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  textarea {
+    width: 100%; background: var(--surface); border: 2px solid var(--border);
+    border-radius: 8px; color: var(--ink); font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; padding: 1rem; resize: vertical; min-height: 200px; outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--border); }
+
+  button.btn {
+    background: var(--ink); color: white; border: none; padding: 1rem 2.5rem;
+    font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 700;
+    border-radius: 8px; cursor: pointer; transition: all 0.2s;
+  }
+  button.btn:hover { background: var(--accent); transform: translateY(-1px); }
+  button.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  #results { display: none; margin-top: 3rem; animation: up 0.4s ease; }
+  @keyframes up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .result-header { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .pill { background: var(--surface); border: 2px solid var(--ink); border-radius: 999px; padding: 0.5rem 1.25rem; font-family: 'Cabinet Grotesk', sans-serif; font-weight: 700; font-size: 0.9rem; }
+  .pill.accent { background: var(--accent); color: white; border-color: var(--accent); }
+  .pill.blue { background: var(--accent2); color: white; border-color: var(--accent2); }
+
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+  .stat-card .num { font-family: 'Cabinet Grotesk', sans-serif; font-size: 2rem; font-weight: 800; line-height: 1; }
+  .stat-card .lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; margin-top: 0.25rem; }
+
+  .section { background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
+  .section h3 { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 1rem; }
+
+  .tag { display: inline-block; background: #f0ece6; border-radius: 4px; padding: 3px 10px; font-size: 0.75rem; margin: 3px; color: var(--ink); }
+  .tag.matched { background: #d4f0e4; color: var(--green); }
+  .tag.missing { background: var(--red-bg); color: #b91c1c; }
+
+  .match-bar-wrap { margin-bottom: 1rem; }
+  .match-score-num { font-family: 'Cabinet Grotesk', sans-serif; font-size: 3rem; font-weight: 800; }
+  .match-score-num.high { color: var(--green); }
+  .match-score-num.mid { color: #d97706; }
+  .match-score-num.low { color: #dc2626; }
+  .bar-track { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 0.5rem; }
+  .bar-fill { height: 100%; background: var(--ink); border-radius: 999px; transition: width 1s ease; }
+
+  .flag { background: var(--red-bg); border-left: 4px solid #dc2626; padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 0.5rem; font-size: 0.82rem; }
+  .insight { background: var(--yellow-bg); border-left: 4px solid var(--accent); padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 0.5rem; font-size: 0.82rem; }
+
+  #loading { display:none; text-align:center; padding:3rem; color:var(--muted); }
+  .spinner { width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--ink);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem; }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #error { display:none; color:#dc2626; background:var(--red-bg); border:1px solid #fca5a5; border-radius:8px; padding:1rem; margin-top:1rem; font-size:0.82rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">jd<span>.</span>analyze</div>
+  <span class="tagline">AI-powered job description intelligence</span>
+</header>
+<main>
+  <h1>Decode any <span>job post</span><br>in seconds</h1>
+  <p class="sub">Paste a JD and your resume — get role type, required skills, red flags, and your match score.</p>
+
+  <div class="two-col">
+    <div>
+      <label>Job Description *</label>
+      <textarea id="jdText" placeholder="Paste the full job description here...&#10;&#10;We're looking for an AI Engineer to join our team. You will be responsible for building and deploying ML models..."></textarea>
+    </div>
+    <div>
+      <label>Your Resume (optional — for match score)</label>
+      <textarea id="resumeText" placeholder="Paste your resume text here to see how well you match...&#10;&#10;This is optional but enables the match score feature."></textarea>
+    </div>
+  </div>
+
+  <button class="btn" onclick="analyze()" id="analyzeBtn">Analyze Job Description →</button>
+  <div id="error"></div>
+  <div id="loading"><div class="spinner"></div><p>Analyzing...</p></div>
+
+  <div id="results">
+    <div class="result-header">
+      <div class="pill accent" id="roleType">—</div>
+      <div class="pill blue" id="seniority">—</div>
+      <div class="pill" id="complexity">—</div>
+    </div>
+
+    <div class="grid3" id="statCards"></div>
+
+    <div id="matchSection" class="section" style="display:none">
+      <h3>📊 Your Match Score</h3>
+      <div class="match-bar-wrap">
+        <div class="match-score-num" id="matchNum">—</div>
+        <div class="bar-track"><div class="bar-fill" id="matchBar" style="width:0%"></div></div>
+      </div>
+      <div style="margin-top:1rem">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">MATCHED SKILLS</div>
+        <div id="matchedSkills"></div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:0.75rem 0 0.5rem">SKILLS TO ADD</div>
+        <div id="missingSkills"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>🛠 Required Tech Skills</h3>
+      <div id="requiredSkills"></div>
+    </div>
+
+    <div id="redFlagSection" class="section" style="display:none">
+      <h3>🚩 Red Flags Detected</h3>
+      <div id="redFlags"></div>
+    </div>
+
+    <div class="section">
+      <h3>💡 Insights & Tips</h3>
+      <div id="insights"></div>
+    </div>
+
+    <div class="section">
+      <h3>💰 Benefits Mentioned</h3>
+      <div id="benefits"></div>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+
+async function analyze() {
+  const jd = document.getElementById('jdText').value.trim();
+  const resume = document.getElementById('resumeText').value.trim();
+  const btn = document.getElementById('analyzeBtn');
+  const err = document.getElementById('error');
+  err.style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  if (!jd) { err.textContent = 'Please paste a job description.'; err.style.display = 'block'; return; }
+  btn.disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const res = await fetch(API + '/analyze', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ job_description: jd, resume_text: resume })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Analysis failed'); }
+    const data = await res.json();
+    renderResults(data);
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block';
+  } finally {
+    btn.disabled = false; document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function renderResults(d) {
+  document.getElementById('roleType').textContent = '🎯 ' + d.role_type;
+  document.getElementById('seniority').textContent = d.seniority_level;
+  document.getElementById('complexity').textContent = 'Complexity: ' + d.stats.complexity;
+
+  document.getElementById('statCards').innerHTML = [
+    ['Skills Required', d.stats.skills_required],
+    ['Red Flags', d.stats.red_flags_count],
+    ['Word Count', d.stats.word_count],
+    ['Benefits', d.benefits_mentioned.length],
+  ].map(([l,v]) => `<div class="stat-card"><div class="num">${v}</div><div class="lbl">${l}</div></div>`).join('');
+
+  const m = d.match_score;
+  if (m.score !== null) {
+    const ms = document.getElementById('matchSection');
+    ms.style.display = 'block';
+    const mn = document.getElementById('matchNum');
+    mn.textContent = m.score + '%';
+    mn.className = 'match-score-num ' + (m.score >= 70 ? 'high' : m.score >= 40 ? 'mid' : 'low');
+    document.getElementById('matchBar').style.width = m.score + '%';
+    document.getElementById('matchedSkills').innerHTML = m.matched_skills.map(s => `<span class="tag matched">${s}</span>`).join('') || '<span style="color:var(--muted);font-size:0.8rem">None matched</span>';
+    document.getElementById('missingSkills').innerHTML = m.missing_skills.map(s => `<span class="tag missing">${s}</span>`).join('') || '<span style="color:var(--green);font-size:0.8rem">All skills matched!</span>';
+  }
+
+  document.getElementById('requiredSkills').innerHTML = d.required_skills.length
+    ? d.required_skills.map(s => `<span class="tag">${s}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:0.8rem">No specific tech skills detected</span>';
+
+  if (d.red_flags.length) {
+    document.getElementById('redFlagSection').style.display = 'block';
+    document.getElementById('redFlags').innerHTML = d.red_flags.map(f => `<div class="flag">${f}</div>`).join('');
+  }
+
+  document.getElementById('insights').innerHTML = d.insights.map(i => `<div class="insight">${i}</div>`).join('');
+  document.getElementById('benefits').innerHTML = d.benefits_mentioned.length
+    ? d.benefits_mentioned.map(b => `<span class="tag">${b}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:0.8rem">No benefits explicitly mentioned</span>';
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
